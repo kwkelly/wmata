@@ -64,9 +64,6 @@ def pairwise(iterable):
 
 
 # Get the path from Shady Grove to Glenmont
-# A15 - Shady Grove
-# B11 - Glenmont
-
 params = urllib.parse.urlencode({
     # Request parameters
     'FromStationCode': 'A15',
@@ -90,42 +87,53 @@ print('###################################')
 
 
 # Get the schedule information
-for station1, station2 in pairwise(path['Path']):
-    params = urllib.parse.urlencode({
-        # Request parameters
-        'FromStationCode': station1['StationCode'], # Woodley Park
-        'ToStationCode': station2['StationCode'], # Dupont --> Glenmont bound train
-    })
+red_station_times_file = "red_station_times.txt"
+if False:
+    with open(red_station_times_file, "w") as f:
+        station_list = []
+        for station1, station2 in pairwise(path['Path']):
+            params = urllib.parse.urlencode({
+                # Request parameters
+                'FromStationCode': station1['StationCode'], # Woodley Park
+                'ToStationCode': station2['StationCode'],  # Dupont --> Glenmont bound train
+            })
 
 
-    try:
-        conn = http.client.HTTPSConnection('api.wmata.com')
-        conn.request("GET", "/Rail.svc/json/jSrcStationToDstStationInfo?%s" % params, "{body}", headers)
-        response = conn.getresponse()
-        data = response.read().decode('utf-8')
-        parsed = json.loads(data)
-        #print(json.dumps(parsed['StationToStationInfos'], indent=4))
-        time_between_stations = int(parsed['StationToStationInfos'][0]['RailTime'])*2
-        conn.close()
-    except Exception as e:
-        print("[Errno {0}] {1}".format(e.errno, e.strerror))
+            try:
+                conn = http.client.HTTPSConnection('api.wmata.com')
+                conn.request("GET", "/Rail.svc/json/jSrcStationToDstStationInfo?%s" % params, "{body}", headers)
+                response = conn.getresponse()
+                data = response.read().decode('utf-8')
+                parsed = json.loads(data)
+                station_list.append(parsed["StationToStationInfos"])
+                conn.close()
+            except Exception as e:
+                print("[Errno {0}] {1}".format(e.errno, e.strerror))
 
-    ####################################
+        f.write(json.dumps(station_list, indent=4))
 
-    # Get the real time predictions
+            ####################################
 
-    try:
-        conn = http.client.HTTPSConnection('api.wmata.com')
-        conn.request("GET", "/StationPrediction.svc/json/GetPrediction/All?%s" % params, "{body}", headers)
-        response = conn.getresponse()
-        data = response.read().decode('utf-8')
-        parsed = json.loads(data)
-        # get only those trains arriving to Dupont
+# Get the real time predictions
+
+with open(red_station_times_file, 'r') as f:
+    station_times  = f.read()
+    times = json.loads(station_times)
+
+try:
+    conn = http.client.HTTPSConnection('api.wmata.com')
+    conn.request("GET", "/StationPrediction.svc/json/GetPrediction/All?%s" % params, "{body}", headers)
+    response = conn.getresponse()
+    data = response.read().decode('utf-8')
+    parsed = json.loads(data)
+    for station1, station2 in pairwise(path['Path']):
+        # find the time to the destination station
+        station_info = [station for station in times if station['StationToStationInfos'][0]['DestinationStation'] == station2['StationCode']][0]
+        time_between_stations = int(station_info['StationToStationInfos'][0]['RailTime'])
         for train in parsed['Trains']:
             if is_destination(train, 'Glenmont') and is_location(train, station2['StationName']) and arrive_time_less(train, time_between_stations) and not is_empty_car(train):
                 print(json.dumps(train))
-        #print(json.dumps(parsed, indent=4))
         conn.close()
-    except Exception as e:
-        print("[Errno {0}] {1}".format(e.errno, e.strerror))
+except Exception as e:
+    print("[Errno {0}] {1}".format(e.errno, e.strerror))
 
