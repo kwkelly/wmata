@@ -82,6 +82,7 @@ class TrainInfo():
         self.stations_dict = self.create_stations_dict()
         self.circ_seq_dict = self.get_circuit_to_sequence_dict()
         self.circ_track_dict = self.get_circuit_to_track_dict()
+        print(self.stations_dict)
 
     def create_stations_dict(self):
         """
@@ -90,8 +91,8 @@ class TrainInfo():
         stations_dict = {}
         for line_code in self.line_codes:
             stations = get_station_list(line_code)
-            stations_dict[line_code] = {station['Code']: station['Name']
-                                        for station in stations['Stations']}
+            for station in stations['Stations']:
+                stations_dict[station['Code']] = station['Name']
         return stations_dict
 
     def get_circuit_to_sequence_dict(self):
@@ -157,7 +158,7 @@ class TrainInfo():
                     circuit_id = train['CircuitId']
                     track = self.circ_track_dict[circuit_id]
                     train['DestinationName'] = \
-                        self.stations_dict[line_code] \
+                        self.stations_dict \
                         .get(train['DestinationStationCode'])
                     if track not in [1, 2]:
                         seq_num = None
@@ -171,7 +172,7 @@ class TrainInfo():
                     if seq_num is None:
                         continue
                     train['LocationCode'] = self.get_next_station(train)
-                    train['LocationName'] = self.stations_dict[line_code]\
+                    train['LocationName'] = self.stations_dict\
                         .get(train['LocationCode'])
 
                 # remove trains without well defined seq num
