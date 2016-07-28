@@ -82,7 +82,6 @@ class TrainInfo():
         self.stations_dict = self.create_stations_dict()
         self.circ_seq_dict = self.get_circuit_to_sequence_dict()
         self.circ_track_dict = self.get_circuit_to_track_dict()
-        print(self.stations_dict)
 
     def create_stations_dict(self):
         """
