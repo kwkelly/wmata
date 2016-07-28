@@ -235,8 +235,7 @@ def get_and_save_trains():
     f.close()
     for i in itertools.count():
         if i > 0:
-            delay = 15 + 10 * random.random()
-            print('sleeping {}s...'.format(delay))
+            delay = 15
             time.sleep(delay)
 
         try:
